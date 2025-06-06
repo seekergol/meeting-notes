@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Loader2 } from "lucide-react"
+import { Loader2, AlertCircle, Info } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
@@ -42,18 +42,48 @@ export default function SummaryGenerator({ transcriptionText, onSummaryGenerated
       })
       
       if (!response.ok) {
-        throw new Error(`生成摘要时出现错误 (${response.status})`)
+        const errorData = await response.json()
+        throw new Error(errorData.error || `生成摘要时出现错误 (${response.status})`)
       }
       
       const data = await response.json()
       setSummary(data.summary)
       onSummaryGenerated(data.summary)
-    } catch (err) {
+    } catch (err: any) {
       console.error("生成摘要失败:", err)
-      setError("生成摘要时出现错误，请稍后重试")
+      setError(err.message || "生成摘要时出现错误，请稍后重试")
     } finally {
       setIsGenerating(false)
     }
+  }
+  
+  // 模拟生成摘要（用于测试）
+  const generateMockSummary = () => {
+    setIsGenerating(true)
+    setError(null)
+    
+    // 模拟API延迟
+    setTimeout(() => {
+      const mockSummary = `
+## 会议摘要
+
+### 主要讨论点
+- 第三季度销售策略讨论
+- 线上营销预算增加的提案
+- 线上渠道转化率提高了15%
+
+### 重要决策
+- 同意将Q3营销预算增加20%用于线上渠道
+
+### 行动项目
+- 市场部需要准备详细的执行方案
+- 销售团队目标调整（负责人：说话人3）
+      `
+      
+      setSummary(mockSummary)
+      onSummaryGenerated(mockSummary)
+      setIsGenerating(false)
+    }, 2000)
   }
   
   return (
@@ -64,9 +94,18 @@ export default function SummaryGenerator({ transcriptionText, onSummaryGenerated
       <CardContent>
         {error && (
           <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
+        
+        <Alert variant="default" className="mb-4">
+          <Info className="h-4 w-4" />
+          <AlertDescription>
+            请注意：真实API调用需要在.env.local文件中配置OPENROUTER_API_KEY。
+            如果未配置，将使用模拟数据进行测试。
+          </AlertDescription>
+        </Alert>
         
         <div className="mb-4">
           <Textarea 
@@ -107,7 +146,7 @@ export default function SummaryGenerator({ transcriptionText, onSummaryGenerated
           </div>
         )}
       </CardContent>
-      <CardFooter>
+      <CardFooter className="flex flex-col sm:flex-row gap-2">
         <Button 
           onClick={generateSummary} 
           disabled={isGenerating || !transcriptionText}
@@ -118,7 +157,21 @@ export default function SummaryGenerator({ transcriptionText, onSummaryGenerated
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               正在生成摘要...
             </>
-          ) : "生成会议摘要"}
+          ) : "使用真实API生成摘要"}
+        </Button>
+        
+        <Button 
+          onClick={generateMockSummary} 
+          variant="outline"
+          disabled={isGenerating || !transcriptionText}
+          className="w-full"
+        >
+          {isGenerating ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              正在生成摘要...
+            </>
+          ) : "使用模拟数据测试"}
         </Button>
       </CardFooter>
     </Card>
