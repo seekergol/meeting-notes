@@ -40,6 +40,9 @@ export default function Home() {
           <Link href="#" className="text-muted-foreground hover:text-foreground">
             特性
           </Link>
+          <Link href="/test" className="text-muted-foreground hover:text-foreground">
+            测试功能
+          </Link>
           <Link href="#" className="text-muted-foreground hover:text-foreground">
             文档
           </Link>
@@ -112,7 +115,7 @@ export default function Home() {
             告别低效率，用我们开创性的 AI 应用程序提高您的工作流程，提高生产力，并轻松实现人最大化。
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-            <Link href="/app/app">
+            <Link href="/app">
               <Button size="lg" className="gap-2 w-full sm:w-auto">
                 立即开始使用
                 <svg
@@ -190,13 +193,18 @@ export default function Home() {
         <div className="flex-1">
           <div className="relative">
             <div className="absolute -inset-1 rounded-xl bg-gradient-to-r from-primary/50 to-secondary/50 opacity-75 blur-xl"></div>
-            <Card className="relative overflow-hidden border-0 shadow-xl">
+            <Card className="relative overflow-hidden border-0 shadow-xl float-animation">
               <CardContent className="p-0">
-                <img
-                  src="/placeholder.jpg"
-                  alt="会议笔记应用截图"
-                  className="w-full h-auto rounded-lg"
-                />
+                <div className="screenshot-container">
+                  <img
+                    src="/images/app-screenshot-1.svg"
+                    alt="会议笔记应用截图"
+                    className="w-full h-auto rounded-lg"
+                    width={600}
+                    height={400}
+                  />
+                  <div className="screenshot-overlay"></div>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -215,13 +223,18 @@ export default function Home() {
         <div className="grid md:grid-cols-2 gap-12 items-center">
           <div className="relative">
             <div className="absolute -inset-1 rounded-xl bg-gradient-to-r from-primary/30 to-secondary/30 opacity-50 blur-xl"></div>
-            <Card className="relative overflow-hidden border-0 shadow-xl">
+            <Card className="relative overflow-hidden border-0 shadow-xl float-animation-delay">
               <CardContent className="p-0">
-                <img
-                  src="/placeholder.jpg"
-                  alt="会议笔记功能展示"
-                  className="w-full h-auto rounded-lg"
-                />
+                <div className="screenshot-container">
+                  <img
+                    src="/images/app-screenshot-2.svg"
+                    alt="会议笔记功能展示"
+                    className="w-full h-auto rounded-lg"
+                    width={600}
+                    height={400}
+                  />
+                  <div className="screenshot-overlay"></div>
+                </div>
               </CardContent>
             </Card>
           </div>
