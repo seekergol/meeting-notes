@@ -14,6 +14,8 @@ import TranscriptionViewer from "@/components/transcription-viewer"
 import DepartmentInput from "@/components/department-input"
 import { useToast } from "@/hooks/use-toast"
 import SummaryGenerator from "@/components/summary-generator"
+import UserProfile from "@/components/auth/user-profile"
+import { useAuth } from "@/contexts/auth-context"
 
 // 定义转写结果的类型
 interface TranscriptionSegment {
@@ -37,6 +39,7 @@ interface SavedNote {
 }
 
 export default function AppPage() {
+  const { user } = useAuth()
   const [activeTab, setActiveTab] = useState("record")
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null)
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
@@ -289,65 +292,100 @@ export default function AppPage() {
   })
 
   return (
-    <main className="container mx-auto py-6 px-4 max-w-5xl">
-      <h1 className="text-3xl font-bold mb-6 text-center">会议笔记三件套</h1>
+    <div className="min-h-screen bg-background">
+      {/* 顶部导航栏 */}
+      <header className="border-b">
+        <div className="container mx-auto py-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="text-primary-foreground"
+              >
+                <path d="M12 2v8"></path>
+                <path d="m4.93 10.93 1.41 1.41"></path>
+                <path d="M2 18h2"></path>
+                <path d="M20 18h2"></path>
+                <path d="m19.07 10.93-1.41 1.41"></path>
+                <path d="M22 22H2"></path>
+                <path d="m8 22 4-10 4 10"></path>
+              </svg>
+            </div>
+            <span className="font-bold text-xl">会议笔记</span>
+          </div>
+          
+          <div className="flex items-center gap-4">
+            {user && (
+              <div className="text-sm text-muted-foreground">
+                欢迎回来，{user.phone ? `${user.phone.slice(-4)}用户` : '用户'}
+              </div>
+            )}
+            <UserProfile />
+          </div>
+        </div>
+      </header>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid grid-cols-4 mb-8">
-          <TabsTrigger value="record" className="flex items-center gap-2">
-            <Mic className="w-4 h-4" />
-            <span>录音/上传</span>
-          </TabsTrigger>
-          <TabsTrigger value="transcription" disabled={!transcription} className="flex items-center gap-2">
-            <FileText className="w-4 h-4" />
-            <span>转写文本</span>
-          </TabsTrigger>
-          <TabsTrigger value="summary" disabled={!summary} className="flex items-center gap-2">
-            <CheckCircle className="w-4 h-4" />
-            <span>AI总结</span>
-          </TabsTrigger>
-          <TabsTrigger value="archive" className="flex items-center gap-2">
-            <Search className="w-4 h-4" />
-            <span>归档查询</span>
-          </TabsTrigger>
-        </TabsList>
+      {/* 主要内容 */}
+      <main className="container mx-auto py-8 px-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <div className="flex justify-between items-center mb-6">
+            <TabsList>
+              <TabsTrigger value="record" className="flex items-center gap-2">
+                <Mic className="h-4 w-4" />
+                <span>录制</span>
+              </TabsTrigger>
+              <TabsTrigger value="transcription" className="flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                <span>转写</span>
+              </TabsTrigger>
+              <TabsTrigger value="summary" className="flex items-center gap-2">
+                <CheckCircle className="h-4 w-4" />
+                <span>摘要</span>
+              </TabsTrigger>
+              <TabsTrigger value="history" className="flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                <span>历史</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
-        <TabsContent value="record">
-          <Card className="border shadow-sm">
-            <CardHeader className="bg-muted/30">
-              <CardTitle>录制或上传会议音频</CardTitle>
-              <CardDescription>支持录制或上传最长30分钟的音频</CardDescription>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="grid gap-6">
-                <div className="grid gap-4">
-                  <h3 className="text-lg font-medium">语音识别</h3>
-                  <div className="flex flex-col items-center">
-                    <SpeechRecognition onTranscript={handleTranscript} language="zh-CN" />
-                    {transcriptionText && (
-                      <div className="mt-4 p-3 bg-muted/30 rounded-md w-full">
-                        <p className="text-sm italic">{transcriptionText}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
+          {/* 录制标签页 */}
+          <TabsContent value="record" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>录制会议</CardTitle>
+                <CardDescription>录制会议音频或上传已有音频文件</CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-6">
+                {/* 录音组件 */}
+                <div className="grid md:grid-cols-2 gap-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">录制音频</CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex justify-center py-6">
+                      <SpeechRecognition 
+                        onTranscript={handleTranscript}
+                        language="zh-CN"
+                      />
+                    </CardContent>
+                  </Card>
 
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t" />
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-background px-2 text-muted-foreground">或</span>
-                  </div>
-                </div>
-
-                <div className="grid gap-4">
-                  <h3 className="text-lg font-medium">上传音频文件</h3>
-                  <div className="grid w-full items-center gap-4">
-                    <label htmlFor="audio-upload" className="cursor-pointer">
-                      <div className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-md hover:bg-muted/50 transition-colors">
-                        <Upload className="h-10 w-10 text-muted-foreground mb-2" />
-                        <p className="text-sm text-muted-foreground">点击上传音频文件 (最大30分钟)</p>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">上传音频</CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex flex-col items-center justify-center py-6 gap-4">
+                      <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center">
+                        <Upload className="h-8 w-8 text-muted-foreground" />
                       </div>
                       <Input
                         id="audio-upload"
@@ -356,194 +394,172 @@ export default function AppPage() {
                         className="hidden"
                         onChange={handleFileUpload}
                       />
-                    </label>
-                  </div>
+                      <label htmlFor="audio-upload">
+                        <Button variant="outline" className="cursor-pointer" asChild>
+                          <span>选择音频文件</span>
+                        </Button>
+                      </label>
+                      <p className="text-sm text-muted-foreground">支持MP3, WAV, M4A等格式</p>
+                    </CardContent>
+                  </Card>
                 </div>
 
+                {/* 音频预览 */}
                 {audioUrl && (
-                  <div className="grid gap-2">
-                    <h3 className="text-lg font-medium">预览音频</h3>
-                    <audio src={audioUrl} controls className="w-full rounded-md" />
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">音频预览</CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex justify-center">
+                      <audio src={audioUrl} controls className="w-full max-w-md" />
+                    </CardContent>
+                    <CardFooter>
+                      <Button
+                        onClick={transcribeAudio}
+                        disabled={isTranscribing}
+                        className="w-full"
+                      >
+                        {isTranscribing ? "转写中..." : "开始转写"}
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* 转写标签页 */}
+          <TabsContent value="transcription" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>转写结果</CardTitle>
+                <CardDescription>会议转写文本</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {transcription ? (
+                  <TranscriptionViewer transcription={transcription} />
+                ) : (
+                  <div className="text-center py-12">
+                    <p className="text-muted-foreground">暂无转写内容</p>
                   </div>
                 )}
-              </div>
-            </CardContent>
-            <CardFooter className="flex justify-between border-t p-6 bg-muted/10">
-              <Button className="bg-background border hover:bg-accent hover:text-accent-foreground" onClick={() => setActiveTab("archive")}>
-                查看归档
-              </Button>
-              <Button onClick={transcribeAudio} disabled={!audioBlob || isTranscribing} className="gap-2">
-                {isTranscribing ? "转写中..." : "开始转写"}
-                {!isTranscribing && <FileText className="w-4 h-4" />}
-              </Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
+              </CardContent>
+              <CardFooter className="flex justify-between">
+                <Button variant="outline" onClick={() => setActiveTab("record")}>
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  返回录制
+                </Button>
+                <Button
+                  onClick={generateSummary}
+                  disabled={!transcription || isGeneratingSummary}
+                >
+                  {isGeneratingSummary ? "生成中..." : "生成摘要"}
+                </Button>
+              </CardFooter>
+            </Card>
+          </TabsContent>
 
-        <TabsContent value="transcription">
-          <Card className="border shadow-sm">
-            <CardHeader className="bg-muted/30">
-              <CardTitle>会议转写文本</CardTitle>
-              <CardDescription>带有说话人标记的转写文本</CardDescription>
-            </CardHeader>
-            <CardContent className="pt-6">{transcription && <TranscriptionViewer transcription={transcription} />}</CardContent>
-            <CardFooter className="flex justify-between border-t p-6 bg-muted/10">
-              <Button className="bg-background border hover:bg-accent hover:text-accent-foreground" onClick={() => setActiveTab("record")}>
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                返回
-              </Button>
-              <Button onClick={generateSummary} disabled={isGeneratingSummary} className="gap-2">
-                {isGeneratingSummary ? "生成中..." : "生成AI总结"}
-                {!isGeneratingSummary && <CheckCircle className="w-4 h-4" />}
-              </Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="summary">
-          <Card className="border shadow-sm">
-            <CardHeader className="bg-muted/30">
-              <CardTitle>会议总结</CardTitle>
-              <CardDescription>AI生成的会议要点和行动项</CardDescription>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="grid gap-6">
-                <div className="grid gap-3">
-                  <label htmlFor="department" className="text-sm font-medium">
-                    部门 <span className="text-red-500">*</span>
-                  </label>
-                  <DepartmentInput value={department} onChange={setDepartment} />
-                </div>
-
+          {/* 摘要标签页 */}
+          <TabsContent value="summary" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>会议摘要</CardTitle>
+                <CardDescription>AI生成的会议摘要</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
                 <SummaryGenerator 
-                  transcriptionText={transcriptionText} 
-                  onSummaryGenerated={handleSummaryGenerated} 
+                  transcriptionText={transcriptionText}
+                  onSummaryGenerated={handleSummaryGenerated}
                 />
+              </CardContent>
+              <CardFooter className="flex flex-col gap-4">
+                <div className="w-full">
+                  <DepartmentInput
+                    value={department}
+                    onChange={setDepartment}
+                  />
+                </div>
+                <div className="flex justify-between w-full">
+                  <Button variant="outline" onClick={() => setActiveTab("transcription")}>
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    返回转写
+                  </Button>
+                  <Button
+                    onClick={saveNote}
+                    disabled={!transcription || !summary || !department || isSaving}
+                  >
+                    <Save className="mr-2 h-4 w-4" />
+                    {isSaving ? "保存中..." : "保存笔记"}
+                  </Button>
+                </div>
+              </CardFooter>
+            </Card>
+          </TabsContent>
 
-                {summary && (
-                  <div className="grid gap-3">
-                    <label className="text-sm font-medium">AI生成的总结</label>
-                    <div className="p-4 border rounded-md bg-muted/30">
-                      <div className="prose prose-sm max-w-none">
-                        {summary.split("\n").map((line, i) => (
-                          <div key={i} className="mb-1">
-                            {line.startsWith("###") ? (
-                              <h3 className="text-base font-semibold mt-3 mb-2">{line.replace("###", "")}</h3>
-                            ) : line.startsWith("##") ? (
-                              <h2 className="text-lg font-bold mt-2 mb-3">{line.replace("##", "")}</h2>
-                            ) : line.startsWith("- [ ]") ? (
-                              <div className="flex items-start gap-2">
-                                <input type="checkbox" className="mt-1" />
-                                <span>{line.replace("- [ ]", "")}</span>
-                              </div>
-                            ) : line.startsWith("- ") ? (
-                              <div className="flex items-start gap-2">
-                                <span>•</span>
-                                <span>{line.replace("- ", "")}</span>
-                              </div>
-                            ) : line.match(/^\d+\./) ? (
-                              <div className="flex items-start gap-2">
-                                <span>{line.match(/^\d+\./)?.[0]}</span>
-                                <span>{line.replace(/^\d+\./, "")}</span>
-                              </div>
-                            ) : (
-                              <p>{line}</p>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-            <CardFooter className="flex justify-between border-t p-6 bg-muted/10">
-              <Button className="bg-background border hover:bg-accent hover:text-accent-foreground" onClick={() => setActiveTab("transcription")}>
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                返回
-              </Button>
-              <Button onClick={saveNote} disabled={isSaving || !department.trim() || !summary} className="gap-2">
-                <Save className="w-4 h-4" />
-                {isSaving ? "保存中..." : "保存并归档"}
-              </Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="archive">
-          <Card className="border shadow-sm">
-            <CardHeader className="bg-muted/30">
-              <CardTitle>会议笔记归档</CardTitle>
-              <CardDescription>搜索并查看已保存的会议笔记</CardDescription>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="grid gap-6">
+          {/* 历史标签页 */}
+          <TabsContent value="history" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>历史记录</CardTitle>
+                <CardDescription>已保存的会议笔记</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
                 <div className="flex gap-2">
                   <Input
-                    placeholder="搜索笔记或输入 部门:部门名 进行筛选"
+                    placeholder="搜索会议记录..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
+                    className="flex-1"
                   />
-                  <Button className="bg-background border hover:bg-accent hover:text-accent-foreground shrink-0" onClick={() => setSearchQuery("")}>
-                    清除
+                  <Button variant="outline" size="icon">
+                    <Search className="h-4 w-4" />
                   </Button>
                 </div>
 
-                {filteredNotes.length === 0 ? (
-                  <div className="text-center py-10 text-muted-foreground">
-                    {searchQuery ? "没有找到匹配的笔记" : "暂无保存的会议笔记"}
+                {savedNotes.length > 0 ? (
+                  <div className="space-y-4">
+                    {savedNotes
+                      .filter(
+                        (note) =>
+                          note.department.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          note.summary.toLowerCase().includes(searchQuery.toLowerCase())
+                      )
+                      .map((note) => (
+                        <Card key={note.id}>
+                          <CardHeader className="py-3">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <CardTitle className="text-lg">{note.department}</CardTitle>
+                                <CardDescription>
+                                  {new Date(note.date).toLocaleString()}
+                                </CardDescription>
+                              </div>
+                              <Badge>{note.transcription.segments.length} 段对话</Badge>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="py-2">
+                            <p className="line-clamp-3 text-sm text-muted-foreground">
+                              {note.summary.split("\n")[0]}
+                            </p>
+                          </CardContent>
+                          <CardFooter className="py-3">
+                            <Button variant="outline" size="sm" className="w-full">
+                              查看详情
+                            </Button>
+                          </CardFooter>
+                        </Card>
+                      ))}
                   </div>
                 ) : (
-                  <div className="grid gap-4">
-                    {filteredNotes.map((note) => (
-                      <Card key={note.id} className="overflow-hidden hover:shadow-md transition-shadow">
-                        <CardHeader className="pb-2">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <Badge className="mb-2">{note.department}</Badge>
-                              <CardTitle className="text-base">
-                                {note.summary.split("\n")[0].replace("##", "")}
-                              </CardTitle>
-                            </div>
-                            <div className="flex items-center text-xs text-muted-foreground">
-                              <Clock className="w-3 h-3 mr-1" />
-                              {new Date(note.date).toLocaleDateString()}
-                            </div>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="pb-3">
-                          <p className="text-sm text-muted-foreground line-clamp-2">
-                            {note.transcription.segments[0].text}
-                          </p>
-                        </CardContent>
-                        <CardFooter className="pt-0">
-                          <Button
-                            className="text-primary underline-offset-4 hover:underline p-0 h-auto"
-                            onClick={() => {
-                              setTranscription(note.transcription)
-                              setSummary(note.summary)
-                              setDepartment(note.department)
-                              setActiveTab("summary")
-                            }}
-                          >
-                            查看详情
-                          </Button>
-                        </CardFooter>
-                      </Card>
-                    ))}
+                  <div className="text-center py-12">
+                    <p className="text-muted-foreground">暂无保存的会议记录</p>
                   </div>
                 )}
-              </div>
-            </CardContent>
-            <CardFooter className="border-t p-6 bg-muted/10">
-              <Button className="bg-background border hover:bg-accent hover:text-accent-foreground w-full gap-2" onClick={() => setActiveTab("record")}>
-                <ArrowLeft className="w-4 h-4" />
-                返回录制页面
-              </Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-      </Tabs>
-    </main>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </main>
+    </div>
   )
 } 
