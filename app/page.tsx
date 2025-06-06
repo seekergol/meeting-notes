@@ -112,7 +112,7 @@ export default function Home() {
             告别低效率，用我们开创性的 AI 应用程序提高您的工作流程，提高生产力，并轻松实现人最大化。
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-            <Link href="/app">
+            <Link href="/app/app">
               <Button size="lg" className="gap-2 w-full sm:w-auto">
                 立即开始使用
                 <svg
@@ -229,28 +229,28 @@ export default function Home() {
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <CheckCircle className="text-primary h-5 w-5" />
-                <h3 className="font-semibold text-xl">智能功能</h3>
+                <h3 className="font-semibold text-xl">实时语音转写</h3>
               </div>
               <p className="text-muted-foreground">
-                我们的AI将您的会议录音自动转写为文本并提供智能总结。
+                利用先进的语音识别技术，实时将会议内容转写为文本，支持多人发言区分。
               </p>
             </div>
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <CheckCircle className="text-primary h-5 w-5" />
-                <h3 className="font-semibold text-xl">无需等待</h3>
+                <h3 className="font-semibold text-xl">AI智能摘要</h3>
               </div>
               <p className="text-muted-foreground">
-                轻松与团队成员高效地实时协作。
+                使用OpenRouter API自动生成结构化的会议摘要，包括主要讨论点、决策和行动项目。
               </p>
             </div>
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <CheckCircle className="text-primary h-5 w-5" />
-                <h3 className="font-semibold text-xl">高级定制</h3>
+                <h3 className="font-semibold text-xl">便捷归档管理</h3>
               </div>
               <p className="text-muted-foreground">
-                适应广泛的自定义选项使您能够根据您的特殊需求定制您的体验。
+                轻松保存和检索会议记录，按部门或关键词快速搜索历史会议内容。
               </p>
             </div>
             <Link href="/app">
