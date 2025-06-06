@@ -1,507 +1,331 @@
 "use client"
 
-import type React from "react"
-
-import { useState, useEffect } from "react"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Mic, Upload, Save, Search, Clock, FileText, CheckCircle, ArrowLeft } from "lucide-react"
-import AudioRecorder from "@/components/audio-recorder"
-import TranscriptionViewer from "@/components/transcription-viewer"
-import DepartmentInput from "@/components/department-input"
-import { useToast } from "@/hooks/use-toast"
-
-// 定义转写结果的类型
-interface TranscriptionSegment {
-  speaker: string
-  text: string
-  start: number
-  end: number
-}
-
-interface TranscriptionResult {
-  segments: TranscriptionSegment[]
-}
-
-// 定义保存的笔记类型
-interface SavedNote {
-  id: number
-  department: string
-  transcription: TranscriptionResult
-  summary: string
-  date: string
-}
+import { CheckCircle } from "lucide-react"
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState("record")
-  const [audioBlob, setAudioBlob] = useState<Blob | null>(null)
-  const [audioUrl, setAudioUrl] = useState<string | null>(null)
-  const [isTranscribing, setIsTranscribing] = useState(false)
-  const [transcription, setTranscription] = useState<TranscriptionResult | null>(null)
-  const [summary, setSummary] = useState("")
-  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false)
-  const [department, setDepartment] = useState("")
-  const [isSaving, setIsSaving] = useState(false)
-  const [savedNotes, setSavedNotes] = useState<SavedNote[]>([])
-  const [searchQuery, setSearchQuery] = useState("")
-  const { toast } = useToast()
-
-  useEffect(() => {
-    // Load saved notes from localStorage
-    const notes = localStorage.getItem("meetingNotes")
-    if (notes) {
-      setSavedNotes(JSON.parse(notes))
-    }
-  }, [])
-
-  const handleAudioRecorded = (blob: Blob) => {
-    setAudioBlob(blob)
-    setAudioUrl(URL.createObjectURL(blob))
-    toast({
-      title: "录音完成",
-      description: "音频已准备好，可以开始转写",
-    })
-  }
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      // Check if file is audio and less than 30 minutes (approx 30MB)
-      if (!file.type.startsWith("audio/")) {
-        toast({
-          title: "文件类型错误",
-          description: "请上传音频文件",
-          variant: "destructive",
-        })
-        return
-      }
-
-      if (file.size > 30 * 1024 * 1024) {
-        toast({
-          title: "文件过大",
-          description: "请上传小于30分钟的音频",
-          variant: "destructive",
-        })
-        return
-      }
-
-      setAudioBlob(file)
-      setAudioUrl(URL.createObjectURL(file))
-      toast({
-        title: "文件已上传",
-        description: "音频已准备好，可以开始转写",
-      })
-    }
-  }
-
-  const transcribeAudio = async () => {
-    if (!audioBlob) return
-
-    setIsTranscribing(true)
-
-    try {
-      // In a real app, we would send the audio to a server for transcription
-      // For demo purposes, we'll simulate a transcription after a delay
-      await new Promise((resolve) => setTimeout(resolve, 2000))
-
-      // Mock transcription result with speaker diarization
-      const mockTranscription: TranscriptionResult = {
-        segments: [
-          { speaker: "说话人 1", text: "大家好，今天我们讨论第三季度的销售策略。", start: 0, end: 5 },
-          { speaker: "说话人 2", text: "我认为我们应该增加线上营销的预算。", start: 6, end: 10 },
-          { speaker: "说话人 1", text: "同意，数据显示线上渠道的转化率提高了15%。", start: 11, end: 16 },
-          { speaker: "说话人 3", text: "我们需要确定具体的执行计划和时间表。", start: 17, end: 22 },
-        ],
-      }
-
-      setTranscription(mockTranscription)
-      setActiveTab("transcription")
-
-      toast({
-        title: "转写完成",
-        description: "音频已成功转写为文本",
-      })
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (_error) {
-      // 忽略错误详情，只显示通用错误消息
-      toast({
-        title: "转写失败",
-        description: "请重试或上传其他音频",
-        variant: "destructive",
-      })
-    } finally {
-      setIsTranscribing(false)
-    }
-  }
-
-  const generateSummary = async () => {
-    if (!transcription) return
-
-    setIsGeneratingSummary(true)
-
-    try {
-      // In a real app, we would send the transcription to an AI service
-      // For demo purposes, we'll simulate a summary after a delay
-      await new Promise((resolve) => setTimeout(resolve, 1500))
-
-      const mockSummary = `## 会议总结
-
-### 主要讨论点
-- 第三季度销售策略规划
-- 线上营销预算调整
-- 线上渠道转化率提升15%
-
-### 行动项
-- [ ] 增加线上营销预算
-- [ ] 制定详细执行计划
-- [ ] 确定项目时间表
-
-### 决策
-1. 同意增加线上营销投入
-2. 下次会议前完成执行计划`
-
-      setSummary(mockSummary)
-      setActiveTab("summary")
-
-      toast({
-        title: "总结生成完成",
-        description: "AI已生成会议总结",
-      })
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (_error) {
-      // 忽略错误详情，只显示通用错误消息
-      toast({
-        title: "总结生成失败",
-        description: "请重试",
-        variant: "destructive",
-      })
-    } finally {
-      setIsGeneratingSummary(false)
-    }
-  }
-
-  const saveNote = () => {
-    if (!transcription || !summary) return
-
-    if (!department.trim()) {
-      toast({
-        title: "请输入部门",
-        description: "部门信息不能为空",
-        variant: "destructive",
-      })
-      return
-    }
-
-    setIsSaving(true)
-
-    try {
-      const newNote: SavedNote = {
-        id: Date.now(),
-        department,
-        transcription,
-        summary,
-        date: new Date().toISOString(),
-      }
-
-      const updatedNotes = [...savedNotes, newNote]
-      setSavedNotes(updatedNotes)
-
-      // Save to localStorage
-      localStorage.setItem("meetingNotes", JSON.stringify(updatedNotes))
-
-      // Save department to history
-      const departments = JSON.parse(localStorage.getItem("departments") || "[]")
-      if (!departments.includes(department)) {
-        localStorage.setItem("departments", JSON.stringify([...departments, department]))
-      }
-
-      toast({
-        title: "保存成功",
-        description: "会议笔记已归档",
-      })
-
-      // Reset form
-      setAudioBlob(null)
-      setAudioUrl(null)
-      setTranscription(null)
-      setSummary("")
-      setDepartment("")
-      setActiveTab("record")
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (_error) {
-      // 忽略错误详情，只显示通用错误消息
-      toast({
-        title: "保存失败",
-        description: "请重试",
-        variant: "destructive",
-      })
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
-  const filteredNotes = savedNotes.filter((note) => {
-    if (!searchQuery) return true
-
-    // Check if search is for department tag
-    if (searchQuery.startsWith("部门:")) {
-      const deptQuery = searchQuery.substring(3).trim().toLowerCase()
-      return note.department.toLowerCase().includes(deptQuery)
-    }
-
-    // Regular search
-    return (
-      note.department.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      JSON.stringify(note.transcription).toLowerCase().includes(searchQuery.toLowerCase()) ||
-      note.summary.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-  })
-
   return (
-    <main className="container mx-auto py-6 px-4 max-w-5xl">
-      <h1 className="text-3xl font-bold mb-6 text-center">会议笔记三件套</h1>
+    <main className="min-h-screen bg-gradient-to-b from-background to-background/80">
+      {/* 导航栏 */}
+      <nav className="container mx-auto py-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="text-primary-foreground"
+            >
+              <path d="M12 2v8"></path>
+              <path d="m4.93 10.93 1.41 1.41"></path>
+              <path d="M2 18h2"></path>
+              <path d="M20 18h2"></path>
+              <path d="m19.07 10.93-1.41 1.41"></path>
+              <path d="M22 22H2"></path>
+              <path d="m8 22 4-10 4 10"></path>
+            </svg>
+          </div>
+          <span className="font-bold text-xl">会议笔记三件套</span>
+        </div>
+        <div className="flex items-center gap-4">
+          <Link href="#" className="text-muted-foreground hover:text-foreground">
+            特性
+          </Link>
+          <Link href="#" className="text-muted-foreground hover:text-foreground">
+            文档
+          </Link>
+          <Button variant="ghost" size="icon" className="text-muted-foreground">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.3-4.3"></path>
+            </svg>
+          </Button>
+          <Button variant="ghost" size="icon" className="text-muted-foreground">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx="12" cy="12" r="4"></circle>
+              <path d="M12 2v2"></path>
+              <path d="M12 20v2"></path>
+              <path d="m4.93 4.93 1.41 1.41"></path>
+              <path d="m17.66 17.66 1.41 1.41"></path>
+              <path d="M2 12h2"></path>
+              <path d="M20 12h2"></path>
+              <path d="m6.34 17.66-1.41 1.41"></path>
+              <path d="m19.07 4.93-1.41 1.41"></path>
+            </svg>
+          </Button>
+        </div>
+      </nav>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid grid-cols-4 mb-8">
-          <TabsTrigger value="record" className="flex items-center gap-2">
-            <Mic className="w-4 h-4" />
-            <span>录音/上传</span>
-          </TabsTrigger>
-          <TabsTrigger value="transcription" disabled={!transcription} className="flex items-center gap-2">
-            <FileText className="w-4 h-4" />
-            <span>转写文本</span>
-          </TabsTrigger>
-          <TabsTrigger value="summary" disabled={!summary} className="flex items-center gap-2">
-            <CheckCircle className="w-4 h-4" />
-            <span>AI总结</span>
-          </TabsTrigger>
-          <TabsTrigger value="archive" className="flex items-center gap-2">
-            <Search className="w-4 h-4" />
-            <span>归档查询</span>
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="record">
-          <Card className="border shadow-sm">
-            <CardHeader className="bg-muted/30">
-              <CardTitle>录制或上传会议音频</CardTitle>
-              <CardDescription>支持录制或上传最长30分钟的音频</CardDescription>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="grid gap-6">
-                <div className="grid gap-4">
-                  <h3 className="text-lg font-medium">录制音频</h3>
-                  <AudioRecorder onRecordingComplete={handleAudioRecorded} />
-                </div>
-
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t" />
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-background px-2 text-muted-foreground">或</span>
-                  </div>
-                </div>
-
-                <div className="grid gap-4">
-                  <h3 className="text-lg font-medium">上传音频文件</h3>
-                  <div className="grid w-full items-center gap-4">
-                    <label htmlFor="audio-upload" className="cursor-pointer">
-                      <div className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-md hover:bg-muted/50 transition-colors">
-                        <Upload className="h-10 w-10 text-muted-foreground mb-2" />
-                        <p className="text-sm text-muted-foreground">点击上传音频文件 (最大30分钟)</p>
-                      </div>
-                      <Input
-                        id="audio-upload"
-                        type="file"
-                        accept="audio/*"
-                        className="hidden"
-                        onChange={handleFileUpload}
-                      />
-                    </label>
-                  </div>
-                </div>
-
-                {audioUrl && (
-                  <div className="grid gap-2">
-                    <h3 className="text-lg font-medium">预览音频</h3>
-                    <audio src={audioUrl} controls className="w-full rounded-md" />
-                  </div>
-                )}
+      {/* 英雄区域 */}
+      <section className="container mx-auto py-20 flex flex-col lg:flex-row items-center gap-12">
+        <div className="flex-1 space-y-6 text-center lg:text-left">
+          <div className="inline-block">
+            <div className="flex items-center gap-2 px-3 py-1 rounded-full border bg-muted/50">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="text-primary"
+              >
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+              </svg>
+              <span className="text-sm font-medium">高效易用</span>
+            </div>
+          </div>
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold">立即实现会议转录</h1>
+          <p className="text-xl text-muted-foreground max-w-lg mx-auto lg:mx-0">
+            告别低效率，用我们开创性的 AI 应用程序提高您的工作流程，提高生产力，并轻松实现人最大化。
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+            <Link href="/app">
+              <Button size="lg" className="gap-2 w-full sm:w-auto">
+                立即开始使用
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M5 12h14"></path>
+                  <path d="m12 5 7 7-7 7"></path>
+                </svg>
+              </Button>
+            </Link>
+            <Button variant="outline" size="lg" className="w-full sm:w-auto">
+              了解更多信息
+            </Button>
+          </div>
+          <div className="flex items-center justify-center lg:justify-start gap-2 text-sm text-muted-foreground">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path>
+              <path d="m9 12 2 2 4-4"></path>
+            </svg>
+            <span>已有 350 家企业和 10 位用户（增长中）</span>
+          </div>
+          <div className="flex items-center justify-center lg:justify-start gap-2">
+            <div className="flex -space-x-2">
+              <div className="h-8 w-8 rounded-full border-2 border-background bg-muted flex items-center justify-center text-xs font-medium">
+                JD
               </div>
-            </CardContent>
-            <CardFooter className="flex justify-between border-t p-6 bg-muted/10">
-              <Button className="bg-background border hover:bg-accent hover:text-accent-foreground" onClick={() => setActiveTab("archive")}>
-                查看归档
-              </Button>
-              <Button onClick={transcribeAudio} disabled={!audioBlob || isTranscribing} className="gap-2">
-                {isTranscribing ? "转写中..." : "开始转写"}
-                {!isTranscribing && <FileText className="w-4 h-4" />}
-              </Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="transcription">
-          <Card className="border shadow-sm">
-            <CardHeader className="bg-muted/30">
-              <CardTitle>会议转写文本</CardTitle>
-              <CardDescription>带有说话人标记的转写文本</CardDescription>
-            </CardHeader>
-            <CardContent className="pt-6">{transcription && <TranscriptionViewer transcription={transcription} />}</CardContent>
-            <CardFooter className="flex justify-between border-t p-6 bg-muted/10">
-              <Button className="bg-background border hover:bg-accent hover:text-accent-foreground" onClick={() => setActiveTab("record")}>
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                返回
-              </Button>
-              <Button onClick={generateSummary} disabled={isGeneratingSummary} className="gap-2">
-                {isGeneratingSummary ? "生成中..." : "生成AI总结"}
-                {!isGeneratingSummary && <CheckCircle className="w-4 h-4" />}
-              </Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="summary">
-          <Card className="border shadow-sm">
-            <CardHeader className="bg-muted/30">
-              <CardTitle>会议总结</CardTitle>
-              <CardDescription>AI生成的会议要点和行动项</CardDescription>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="grid gap-6">
-                <div className="grid gap-3">
-                  <label htmlFor="department" className="text-sm font-medium">
-                    部门 <span className="text-red-500">*</span>
-                  </label>
-                  <DepartmentInput value={department} onChange={setDepartment} />
-                </div>
-
-                <div className="grid gap-3">
-                  <label className="text-sm font-medium">AI生成的总结</label>
-                  <div className="p-4 border rounded-md bg-muted/30">
-                    <div className="prose prose-sm max-w-none">
-                      {summary.split("\n").map((line, i) => (
-                        <div key={i} className="mb-1">
-                          {line.startsWith("###") ? (
-                            <h3 className="text-base font-semibold mt-3 mb-2">{line.replace("###", "")}</h3>
-                          ) : line.startsWith("##") ? (
-                            <h2 className="text-lg font-bold mt-2 mb-3">{line.replace("##", "")}</h2>
-                          ) : line.startsWith("- [ ]") ? (
-                            <div className="flex items-start gap-2">
-                              <input type="checkbox" className="mt-1" />
-                              <span>{line.replace("- [ ]", "")}</span>
-                            </div>
-                          ) : line.startsWith("- ") ? (
-                            <div className="flex items-start gap-2">
-                              <span>•</span>
-                              <span>{line.replace("- ", "")}</span>
-                            </div>
-                          ) : line.match(/^\d+\./) ? (
-                            <div className="flex items-start gap-2">
-                              <span>{line.match(/^\d+\./)?.[0]}</span>
-                              <span>{line.replace(/^\d+\./, "")}</span>
-                            </div>
-                          ) : (
-                            <p>{line}</p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+              <div className="h-8 w-8 rounded-full border-2 border-background bg-muted flex items-center justify-center text-xs font-medium">
+                WL
               </div>
-            </CardContent>
-            <CardFooter className="flex justify-between border-t p-6 bg-muted/10">
-              <Button className="bg-background border hover:bg-accent hover:text-accent-foreground" onClick={() => setActiveTab("transcription")}>
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                返回
-              </Button>
-              <Button onClick={saveNote} disabled={isSaving || !department.trim()} className="gap-2">
-                <Save className="w-4 h-4" />
-                {isSaving ? "保存中..." : "保存并归档"}
-              </Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="archive">
-          <Card className="border shadow-sm">
-            <CardHeader className="bg-muted/30">
-              <CardTitle>会议笔记归档</CardTitle>
-              <CardDescription>搜索并查看已保存的会议笔记</CardDescription>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="grid gap-6">
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="搜索笔记或输入 部门:部门名 进行筛选"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                  <Button className="bg-background border hover:bg-accent hover:text-accent-foreground shrink-0" onClick={() => setSearchQuery("")}>
-                    清除
-                  </Button>
-                </div>
-
-                {filteredNotes.length === 0 ? (
-                  <div className="text-center py-10 text-muted-foreground">
-                    {searchQuery ? "没有找到匹配的笔记" : "暂无保存的会议笔记"}
-                  </div>
-                ) : (
-                  <div className="grid gap-4">
-                    {filteredNotes.map((note) => (
-                      <Card key={note.id} className="overflow-hidden hover:shadow-md transition-shadow">
-                        <CardHeader className="pb-2">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <Badge className="mb-2">{note.department}</Badge>
-                              <CardTitle className="text-base">
-                                {note.summary.split("\n")[0].replace("##", "")}
-                              </CardTitle>
-                            </div>
-                            <div className="flex items-center text-xs text-muted-foreground">
-                              <Clock className="w-3 h-3 mr-1" />
-                              {new Date(note.date).toLocaleDateString()}
-                            </div>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="pb-3">
-                          <p className="text-sm text-muted-foreground line-clamp-2">
-                            {note.transcription.segments[0].text}
-                          </p>
-                        </CardContent>
-                        <CardFooter className="pt-0">
-                          <Button
-                            className="text-primary underline-offset-4 hover:underline p-0 h-auto"
-                            onClick={() => {
-                              setTranscription(note.transcription)
-                              setSummary(note.summary)
-                              setDepartment(note.department)
-                              setActiveTab("summary")
-                            }}
-                          >
-                            查看详情
-                          </Button>
-                        </CardFooter>
-                      </Card>
-                    ))}
-                  </div>
-                )}
+              <div className="h-8 w-8 rounded-full border-2 border-background bg-muted flex items-center justify-center text-xs font-medium">
+                ZM
               </div>
-            </CardContent>
-            <CardFooter className="border-t p-6 bg-muted/10">
-              <Button className="bg-background border hover:bg-accent hover:text-accent-foreground w-full gap-2" onClick={() => setActiveTab("record")}>
-                <ArrowLeft className="w-4 h-4" />
-                返回录制页面
+              <div className="h-8 w-8 rounded-full border-2 border-background bg-muted flex items-center justify-center text-xs font-medium">
+                99+
+              </div>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="flex">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <svg
+                    key={star}
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    className="text-yellow-400"
+                  >
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                  </svg>
+                ))}
+              </div>
+              <span className="text-sm">来自 99+ 满意用户</span>
+            </div>
+          </div>
+        </div>
+        <div className="flex-1">
+          <div className="relative">
+            <div className="absolute -inset-1 rounded-xl bg-gradient-to-r from-primary/50 to-secondary/50 opacity-75 blur-xl"></div>
+            <Card className="relative overflow-hidden border-0 shadow-xl">
+              <CardContent className="p-0">
+                <img
+                  src="/placeholder.jpg"
+                  alt="会议笔记应用截图"
+                  className="w-full h-auto rounded-lg"
+                />
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* 特性区域 */}
+      <section className="container mx-auto py-20">
+        <div className="text-center mb-16">
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">提升您的效率！</h2>
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+            我们的会议笔记工具让您的工作更加轻松高效
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-12 items-center">
+          <div className="relative">
+            <div className="absolute -inset-1 rounded-xl bg-gradient-to-r from-primary/30 to-secondary/30 opacity-50 blur-xl"></div>
+            <Card className="relative overflow-hidden border-0 shadow-xl">
+              <CardContent className="p-0">
+                <img
+                  src="/placeholder.jpg"
+                  alt="会议笔记功能展示"
+                  className="w-full h-auto rounded-lg"
+                />
+              </CardContent>
+            </Card>
+          </div>
+          <div className="space-y-8">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="text-primary h-5 w-5" />
+                <h3 className="font-semibold text-xl">智能功能</h3>
+              </div>
+              <p className="text-muted-foreground">
+                我们的AI将您的会议录音自动转写为文本并提供智能总结。
+              </p>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="text-primary h-5 w-5" />
+                <h3 className="font-semibold text-xl">无需等待</h3>
+              </div>
+              <p className="text-muted-foreground">
+                轻松与团队成员高效地实时协作。
+              </p>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="text-primary h-5 w-5" />
+                <h3 className="font-semibold text-xl">高级定制</h3>
+              </div>
+              <p className="text-muted-foreground">
+                适应广泛的自定义选项使您能够根据您的特殊需求定制您的体验。
+              </p>
+            </div>
+            <Link href="/app">
+              <Button size="lg" className="w-full sm:w-auto">
+                立即免费使用
               </Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-      </Tabs>
+            </Link>
+            <p className="text-xs text-muted-foreground">7 天免费试用，无需信用卡</p>
+          </div>
+        </div>
+      </section>
+
+      {/* 页脚 */}
+      <footer className="border-t bg-muted/40">
+        <div className="container mx-auto py-8">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="text-primary-foreground"
+                >
+                  <path d="M12 2v8"></path>
+                  <path d="m4.93 10.93 1.41 1.41"></path>
+                  <path d="M2 18h2"></path>
+                  <path d="M20 18h2"></path>
+                  <path d="m19.07 10.93-1.41 1.41"></path>
+                  <path d="M22 22H2"></path>
+                  <path d="m8 22 4-10 4 10"></path>
+                </svg>
+              </div>
+              <span className="font-bold">会议笔记三件套</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <Badge variant="outline" className="cursor-pointer">
+                安装
+              </Badge>
+              <Badge variant="outline" className="cursor-pointer">
+                文档
+              </Badge>
+              <Button variant="ghost" size="icon" className="text-muted-foreground">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="12" cy="12" r="4"></circle>
+                  <path d="M12 2v2"></path>
+                  <path d="M12 20v2"></path>
+                  <path d="m4.93 4.93 1.41 1.41"></path>
+                  <path d="m17.66 17.66 1.41 1.41"></path>
+                  <path d="M2 12h2"></path>
+                  <path d="M20 12h2"></path>
+                  <path d="m6.34 17.66-1.41 1.41"></path>
+                  <path d="m19.07 4.93-1.41 1.41"></path>
+                </svg>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </footer>
     </main>
   )
 }
