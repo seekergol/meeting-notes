@@ -266,7 +266,7 @@ export default function Home() {
                           </div>
               <p className="text-muted-foreground">
                 轻松保存和检索会议记录，按部门或关键词快速搜索历史会议内容。
-              </p>
+                          </p>
             </div>
             {user ? (
               <Link href="/app">
