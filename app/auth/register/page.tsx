@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { signInWithPhone, verifyOTP } from '@/lib/supabase'
+import { signUpWithEmail, useMockMode } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
@@ -13,69 +13,50 @@ import { Loader2, AlertCircle, ArrowLeft, Info } from 'lucide-react'
 
 export default function RegisterPage() {
   const router = useRouter()
-  const [phone, setPhone] = useState('')
-  const [otp, setOtp] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [name, setName] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [step, setStep] = useState<'phone' | 'otp'>('phone')
   const [success, setSuccess] = useState<string | null>(null)
   const [isMockMode, setIsMockMode] = useState(false)
   
   // 检查是否在模拟模式下运行
   useEffect(() => {
-    const checkMockMode = () => {
-      return !process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    }
-    setIsMockMode(checkMockMode())
+    setIsMockMode(useMockMode())
   }, [])
 
-  // 发送验证码
-  const handleSendOTP = async (e: React.FormEvent) => {
+  // 邮箱密码注册
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
     
-    if (!phone || phone.length < 11) {
-      setError('请输入有效的手机号码')
+    // 表单验证
+    if (!email) {
+      setError('请输入邮箱')
+      return
+    }
+    
+    if (!password) {
+      setError('请输入密码')
+      return
+    }
+    
+    if (password !== confirmPassword) {
+      setError('两次输入的密码不一致')
+      return
+    }
+    
+    if (password.length < 6) {
+      setError('密码长度不能少于6位')
       return
     }
     
     setIsLoading(true)
     
     try {
-      const formattedPhone = formatPhoneNumber(phone)
-      const { error } = await signInWithPhone(formattedPhone)
-      
-      if (error) {
-        throw error
-      }
-      
-      setSuccess('验证码已发送到您的手机，请查收')
-      if (isMockMode) {
-        setSuccess('模拟模式：验证码为 123456')
-      }
-      setStep('otp')
-    } catch (err: any) {
-      setError(err.message || '发送验证码失败，请稍后重试')
-    } finally {
-      setIsLoading(false)
-    }
-  }
-  
-  // 验证OTP
-  const handleVerifyOTP = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
-    
-    if (!otp || otp.length < 6) {
-      setError('请输入完整的验证码')
-      return
-    }
-    
-    setIsLoading(true)
-    
-    try {
-      const formattedPhone = formatPhoneNumber(phone)
-      const { data, error } = await verifyOTP(formattedPhone, otp)
+      const { data, error } = await signUpWithEmail(email, password, { name })
       
       if (error) {
         throw error
@@ -83,33 +64,24 @@ export default function RegisterPage() {
       
       setSuccess('注册成功！')
       
-      // 注册成功，跳转到应用主页
+      // 注册成功，跳转到登录页面
       setTimeout(() => {
-        router.push('/app')
-      }, 1000)
+        router.push('/auth/login')
+      }, 1500)
     } catch (err: any) {
-      setError(err.message || '验证码验证失败，请检查后重试')
+      setError(err.message || '注册失败，请稍后重试')
     } finally {
       setIsLoading(false)
     }
-  }
-  
-  // 格式化手机号为国际格式
-  const formatPhoneNumber = (phoneNumber: string) => {
-    // 如果不是以+开头，添加中国区号
-    if (!phoneNumber.startsWith('+')) {
-      return `+86${phoneNumber}`
-    }
-    return phoneNumber
   }
   
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/40 px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-2xl font-bold">用户注册</CardTitle>
+          <CardTitle className="text-2xl font-bold">创建账号</CardTitle>
           <CardDescription>
-            创建您的会议笔记账号
+            注册一个新的会议笔记账号
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -117,7 +89,7 @@ export default function RegisterPage() {
             <Alert className="mb-4">
               <Info className="h-4 w-4" />
               <AlertDescription>
-                当前运行在模拟模式下，使用验证码 123456 注册
+                当前运行在模拟模式下，任意邮箱和密码均可注册
               </AlertDescription>
             </Alert>
           )}
@@ -135,84 +107,71 @@ export default function RegisterPage() {
             </Alert>
           )}
           
-          {step === 'phone' ? (
-            <form onSubmit={handleSendOTP} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="phone">手机号码</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  placeholder="请输入手机号码"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  required
-                  disabled={isLoading}
-                />
-              </div>
-              
-              <Button
-                type="submit"
-                className="w-full"
+          <form onSubmit={handleRegister} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">姓名</Label>
+              <Input
+                id="name"
+                type="text"
+                placeholder="请输入您的姓名（选填）"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
                 disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    发送验证码...
-                  </>
-                ) : '发送验证码'}
-              </Button>
-            </form>
-          ) : (
-            <form onSubmit={handleVerifyOTP} className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="otp">验证码</Label>
-                  <Button
-                    variant="link"
-                    size="sm"
-                    className="p-0 h-auto text-xs"
-                    onClick={() => setStep('phone')}
-                    type="button"
-                  >
-                    更换手机号
-                  </Button>
-                </div>
-                <Input
-                  id="otp"
-                  type="text"
-                  placeholder="请输入验证码"
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value)}
-                  required
-                  disabled={isLoading}
-                />
-              </div>
-              
-              <Button
-                type="submit"
-                className="w-full"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="email">邮箱</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="请输入邮箱"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
                 disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    验证中...
-                  </>
-                ) : '完成注册'}
-              </Button>
-              
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full"
-                onClick={handleSendOTP}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="password">密码</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="请输入密码（至少6位）"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
                 disabled={isLoading}
-              >
-                重新发送验证码
-              </Button>
-            </form>
-          )}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">确认密码</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                placeholder="请再次输入密码"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                disabled={isLoading}
+              />
+            </div>
+            
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  注册中...
+                </>
+              ) : '注册'}
+            </Button>
+          </form>
         </CardContent>
         <CardFooter className="flex flex-col space-y-4">
           <div className="text-center text-sm">
