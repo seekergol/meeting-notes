@@ -1,16 +1,31 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { signInWithPhone, verifyOTP, signInWithEmail, useMockMode } from '@/lib/supabase'
+import { signInWithPhone, verifyOTP, signInWithEmail, resendConfirmationEmail } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Loader2, AlertCircle, ArrowLeft, Info, Mail, Phone } from 'lucide-react'
+import { Loader2, AlertCircle, ArrowLeft, Info, Mail, Phone, RefreshCw } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+
+// 定义自定义错误类型接口
+interface SupabaseError {
+  message: string;
+  code?: string;
+  needsEmailConfirmation?: boolean;
+  email?: string;
+  confirmationLink?: string | null;
+  originalError?: any;
+}
+
+// 类型守卫
+function isSupabaseError(error: any): error is SupabaseError {
+  return typeof error === 'object' && error !== null && 'message' in error;
+}
 
 export default function LoginPage() {
   const router = useRouter()
@@ -29,17 +44,20 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
-  const [isMockMode, setIsMockMode] = useState(false)
   
-  // 检查是否在模拟模式下运行
-  useEffect(() => {
-    setIsMockMode(useMockMode())
-  }, [])
+  // 邮箱确认相关状态
+  const [needsEmailConfirmation, setNeedsEmailConfirmation] = useState(false)
+  const [emailToConfirm, setEmailToConfirm] = useState('')
+  const [confirmationLink, setConfirmationLink] = useState<string | null>(null)
+  const [isResendingConfirmation, setIsResendingConfirmation] = useState(false)
 
   // 邮箱密码登录
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+    setSuccess(null)
+    setNeedsEmailConfirmation(false)
+    setEmailToConfirm('')
     
     if (!email || !password) {
       setError('请输入邮箱和密码')
@@ -49,10 +67,23 @@ export default function LoginPage() {
     setIsLoading(true)
     
     try {
-      const { data, error } = await signInWithEmail(email, password)
+      const { data, error: signInError } = await signInWithEmail(email, password)
       
-      if (error) {
-        throw error
+      if (signInError) {
+        if (isSupabaseError(signInError)) {
+          if (signInError.message.includes('Invalid login credentials')) {
+            setError('邮箱或密码错误，请检查后重试');
+          } else if (signInError.message.includes('Email not confirmed')) {
+            setError('您的邮箱尚未验证，请检查收件箱并点击验证链接');
+            setNeedsEmailConfirmation(true);
+            setEmailToConfirm(email);
+          } else {
+            setError(signInError.message || '登录失败，请稍后重试');
+          }
+        } else {
+          throw signInError;
+        }
+        return;
       }
       
       setSuccess('登录成功！')
@@ -63,12 +94,90 @@ export default function LoginPage() {
         router.replace('/app')
       }, 1000)
     } catch (err: any) {
+      console.error('登录过程捕获到异常:', err);
       setError(err.message || '登录失败，请检查邮箱和密码')
     } finally {
       setIsLoading(false)
     }
   }
 
+  // 重新发送确认邮件
+  const handleResendConfirmation = async () => {
+    if (!emailToConfirm) {
+      setError('无法重新发送确认邮件，邮箱地址无效');
+      return;
+    }
+    
+    setIsResendingConfirmation(true);
+    setError(null);
+    setSuccess(null);
+    
+    try {
+      console.log('准备重新发送确认邮件到:', emailToConfirm);
+      const { data, error } = await resendConfirmationEmail(emailToConfirm);
+      
+      if (error) {
+        if (error.message.includes('rate limit')) {
+          setError('请求频率过高，请稍后再试。');
+          } else {
+          setError(error.message || '重新发送确认邮件失败，请稍后再试');
+          }
+      } else {
+        setSuccess('确认邮件已重新发送，请检查您的邮箱');
+      }
+    } catch (err: any) {
+      console.error('重新发送确认邮件失败:', err);
+        setError(err.message || '重新发送确认邮件失败，请稍后再试');
+    } finally {
+      setIsResendingConfirmation(false);
+    }
+  };
+  
+  // 管理员确认邮箱（仅开发环境使用）
+  const handleAdminConfirmEmail = async (email: string) => {
+    if (!email) {
+      setError('无法确认邮箱，邮箱地址无效');
+      return;
+    }
+    
+    setIsResendingConfirmation(true);
+    setError(null);
+    setSuccess(null);
+    
+    try {
+      // 调用管理员API确认邮箱
+      const response = await fetch('/api/admin/confirm-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          email,
+          adminKey: 'dev_admin_key' // 在生产环境中应该使用环境变量
+        }),
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || '确认邮箱失败');
+      }
+      
+      setSuccess('邮箱已成功确认，请尝试登录');
+      
+      // 短暂延迟后自动尝试登录
+      setTimeout(() => {
+        handleEmailLogin({ preventDefault: () => {} } as any);
+      }, 1500);
+      
+    } catch (err: any) {
+      console.error('管理员确认邮箱失败:', err);
+      setError(err.message || '确认邮箱失败，请稍后再试');
+    } finally {
+      setIsResendingConfirmation(false);
+    }
+  };
+  
   // 发送验证码
   const handleSendOTP = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -90,9 +199,6 @@ export default function LoginPage() {
       }
       
       setSuccess('验证码已发送到您的手机，请查收')
-      if (isMockMode) {
-        setSuccess('模拟模式：验证码为 123456')
-      }
       setStep('otp')
     } catch (err: any) {
       setError(err.message || '发送验证码失败，请稍后重试')
@@ -154,19 +260,60 @@ export default function LoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {isMockMode && (
-            <Alert className="mb-4">
-              <Info className="h-4 w-4" />
-              <AlertDescription>
-                当前运行在模拟模式下，任意邮箱密码或手机号验证码(123456)均可登录
-              </AlertDescription>
-            </Alert>
-          )}
-          
           {error && (
             <Alert variant="destructive" className="mb-4">
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription>
+                {error}
+                {needsEmailConfirmation && (
+                  <div className="mt-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="mt-1"
+                      onClick={handleResendConfirmation}
+                      disabled={isResendingConfirmation}
+                    >
+                      {isResendingConfirmation ? (
+                        <>
+                          <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                          正在发送...
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw className="mr-2 h-3 w-3" />
+                          重新发送确认邮件
+                        </>
+                      )}
+                    </Button>
+                    
+                    {process.env.NODE_ENV === 'development' && (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="mt-1 ml-2"
+                        onClick={() => handleAdminConfirmEmail(emailToConfirm)}
+                        disabled={isResendingConfirmation}
+                      >
+                        管理员确认邮箱
+                      </Button>
+                    )}
+                    
+                    {confirmationLink && (
+                      <div className="mt-2 text-xs">
+                        <a 
+                          href={confirmationLink} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-blue-500 hover:underline"
+                        >
+                          前往管理控制台确认邮箱（仅开发环境）
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </AlertDescription>
             </Alert>
           )}
           
@@ -219,7 +366,7 @@ export default function LoginPage() {
                 <Button
                   type="submit"
                   className="w-full"
-                  disabled={isLoading}
+                  disabled={isLoading || isResendingConfirmation}
                 >
                   {isLoading ? (
                     <>

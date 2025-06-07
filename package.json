@@ -3,10 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "cross-env CREEM_API_KEY=creem_test_3rj3JKf23s... OPENAI_API_KEY=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 OPENROUTER_API_KEY=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 next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "ngrok": "ngrok http 3000"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
@@ -42,6 +43,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "1.0.4",
+    "creem": "^0.3.37",
     "date-fns": "3.6.0",
     "embla-carousel-react": "8.5.1",
     "html2canvas": "^1.4.1",
@@ -50,9 +52,9 @@
     "next": "15.2.4",
     "next-themes": "^0.4.4",
     "openai": "^5.1.1",
-    "react": "^19",
+    "react": "^18.2.0",
     "react-day-picker": "8.10.1",
-    "react-dom": "^19",
+    "react-dom": "^18.2.0",
     "react-hook-form": "^7.54.1",
     "react-resizable-panels": "^2.1.7",
     "recharts": "2.15.0",
@@ -60,12 +62,15 @@
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^0.9.6",
-    "zod": "^3.24.1"
+    "zod": "^3.24.1",
+    "@supabase/auth-helpers-nextjs": "^0.10.0"
   },
   "devDependencies": {
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "cross-env": "^7.0.3",
+    "ngrok": "^5.0.0-beta.2",
     "postcss": "^8",
     "tailwindcss": "^3.4.17",
     "typescript": "^5"

@@ -1,99 +1,107 @@
 "use client"
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
-import { supabase, getCurrentUser, useMockMode } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
+import type { User, Session } from '@supabase/supabase-js'
 
-type User = any
-type AuthContextType = {
-  user: User | null
-  isLoading: boolean
-  isAuthenticated: boolean
-  refreshUser: () => Promise<void>
+// 定义 Profile 类型
+export type Profile = {
+  id: string;
+  name: string | null;
+  has_paid_subscription: boolean;
+};
+
+// 更新 Context 类型
+interface AuthContextType {
+  user: User | null;
+  profile: Profile | null;
+  session: Session | null;
+  isLoading: boolean;
+  signOut: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType>({
-  user: null,
-  isLoading: true,
-  isAuthenticated: false,
-  refreshUser: async () => {}
-})
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const useAuth = () => useContext(AuthContext)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
+  const [profile, setProfile] = useState<Profile | null>(null)
+  const [session, setSession] = useState<Session | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [isBrowser, setIsBrowser] = useState(false)
 
-  // 确保只在客户端执行
   useEffect(() => {
-    setIsBrowser(true)
-    
-    // 检查本地存储中是否有模拟用户数据
-    if (useMockMode()) {
-      const mockLoggedIn = localStorage.getItem('mock_logged_in')
-      const mockUser = localStorage.getItem('mock_user')
-      
-      if (mockLoggedIn === 'true' && mockUser) {
-        try {
-          setUser(JSON.parse(mockUser))
-        } catch (e) {
-          console.error('解析模拟用户数据失败', e)
+    const fetchSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession()
+        if (error) throw error
+        setSession(session)
+        setUser(session?.user ?? null)
+
+        if (session?.user) {
+          // 如果有用户，就去获取他的 profile
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single()
+          
+          if (profileError) {
+            console.error("获取用户Profile失败:", profileError)
+          } else {
+            setProfile(profileData)
+          }
         }
+      } catch (error) {
+        console.error('获取会话失败:', error)
+      } finally {
+        setIsLoading(false)
       }
-      setIsLoading(false)
+    }
+
+    fetchSession()
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setSession(session)
+        setUser(session?.user ?? null)
+
+        if (event === 'SIGNED_IN' && session?.user) {
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single()
+          
+          if (profileError) {
+            console.error("登录时获取用户Profile失败:", profileError)
+          } else {
+            setProfile(profileData)
+          }
+        }
+
+        if (event === 'SIGNED_OUT') {
+          setProfile(null)
+        }
+
+        setIsLoading(false)
+      }
+    )
+
+    return () => {
+      authListener.subscription.unsubscribe()
     }
   }, [])
 
-  const refreshUser = async () => {
-    if (!isBrowser) return
-    
-    setIsLoading(true)
-    try {
-      const { user: currentUser } = await getCurrentUser()
-      setUser(currentUser)
-    } catch (error) {
-      console.error('刷新用户信息失败:', error)
-      setUser(null)
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    // 只在浏览器环境执行
-    if (!isBrowser) return
-
-    // 初始化时获取用户信息
-    refreshUser()
-
-    // 如果不是模拟模式，监听认证状态变化
-    if (!useMockMode()) {
-      const { data: authListener } = supabase.auth.onAuthStateChange(
-        async (event, session) => {
-          if (session?.user) {
-            setUser(session.user)
-          } else {
-            setUser(null)
-          }
-          setIsLoading(false)
-        }
-      )
-
-      return () => {
-        if (authListener?.subscription) {
-          authListener.subscription.unsubscribe()
-        }
-      }
-    }
-  }, [isBrowser])
-
   const value = {
     user,
-    isLoading: !isBrowser || isLoading, // 在SSR期间始终显示为加载中
-    isAuthenticated: !!user,
-    refreshUser
+    profile,
+    session,
+    isLoading,
+    signOut: async () => {
+      // ... existing code ...
+    }
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
-} 
+}

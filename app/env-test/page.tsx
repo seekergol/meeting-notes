@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useMockMode } from "@/lib/supabase"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Info, AlertCircle } from "lucide-react"
@@ -10,14 +9,21 @@ export default function EnvTestPage() {
   const [supabaseUrl, setSupabaseUrl] = useState<string | null>(null)
   const [supabaseKey, setSupabaseKey] = useState<string | null>(null)
   const [openrouterKey, setOpenrouterKey] = useState<string | null>(null)
-  const [isMockMode, setIsMockMode] = useState<boolean>(true)
+  const [isConfigOk, setIsConfigOk] = useState<boolean>(false)
   
   useEffect(() => {
-    // 检查环境变量
-    setSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL || null)
-    setSupabaseKey(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? "已配置" : null)
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    
+    setSupabaseUrl(url || null)
+    setSupabaseKey(key ? "已配置" : null)
     setOpenrouterKey(process.env.OPENROUTER_API_KEY ? "已配置" : null)
-    setIsMockMode(useMockMode())
+    
+    if (url && key && url !== 'https://example.supabase.co' && key !== 'example-anon-key') {
+      setIsConfigOk(true);
+    } else {
+      setIsConfigOk(false);
+    }
   }, [])
   
   return (
@@ -29,18 +35,18 @@ export default function EnvTestPage() {
           <CardTitle>环境变量状态</CardTitle>
         </CardHeader>
         <CardContent>
-          {isMockMode ? (
+          {!isConfigOk ? (
             <Alert variant="destructive" className="mb-4">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                应用当前在模拟模式下运行，某些功能可能不可用
+                Supabase环境变量未正确配置。请检查您的 `.env.local` 文件。
               </AlertDescription>
             </Alert>
           ) : (
             <Alert className="mb-4">
               <Info className="h-4 w-4" />
               <AlertDescription>
-                应用当前在正常模式下运行，所有功能应该可用
+                Supabase环境变量已配置。
               </AlertDescription>
             </Alert>
           )}

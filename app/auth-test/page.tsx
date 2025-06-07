@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useAuth } from "@/contexts/auth-context"
-import { signInWithPhone, verifyOTP, signOut, useMockMode } from "@/lib/supabase"
+import { signInWithPhone, verifyOTP, signOut } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,17 +10,12 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, AlertCircle, Info, CheckCircle } from "lucide-react"
 
 export default function AuthTestPage() {
-  const { user, isLoading, refreshUser } = useAuth()
+  const { user, isLoading } = useAuth()
   const [phone, setPhone] = useState("")
   const [otp, setOtp] = useState("")
   const [isAuthLoading, setIsAuthLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
-  const [isMockMode, setIsMockMode] = useState(false)
-  
-  useEffect(() => {
-    setIsMockMode(useMockMode())
-  }, [])
   
   const handleSendOTP = async () => {
     if (!phone || phone.length < 11) {
@@ -41,9 +36,6 @@ export default function AuthTestPage() {
       }
       
       setSuccess("验证码已发送到您的手机，请查收")
-      if (isMockMode) {
-        setSuccess("模拟模式：验证码为 123456")
-      }
     } catch (err: any) {
       setError(err.message || "发送验证码失败，请稍后重试")
     } finally {
@@ -70,7 +62,6 @@ export default function AuthTestPage() {
       }
       
       setSuccess("登录成功！")
-      refreshUser() // 刷新用户状态
     } catch (err: any) {
       setError(err.message || "验证码验证失败，请检查后重试")
     } finally {
@@ -91,7 +82,6 @@ export default function AuthTestPage() {
       }
       
       setSuccess("已成功退出登录")
-      refreshUser() // 刷新用户状态
     } catch (err: any) {
       setError(err.message || "退出登录失败，请稍后重试")
     } finally {
@@ -117,15 +107,6 @@ export default function AuthTestPage() {
           <CardTitle>Supabase认证测试</CardTitle>
         </CardHeader>
         <CardContent>
-          {isMockMode && (
-            <Alert className="mb-4">
-              <Info className="h-4 w-4" />
-              <AlertDescription>
-                当前运行在模拟模式下，使用验证码 123456 登录
-              </AlertDescription>
-            </Alert>
-          )}
-          
           {error && (
             <Alert variant="destructive" className="mb-4">
               <AlertCircle className="h-4 w-4" />

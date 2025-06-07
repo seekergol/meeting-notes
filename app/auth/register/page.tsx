@@ -1,15 +1,27 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { signUpWithEmail, useMockMode } from '@/lib/supabase'
+import { signUpWithEmail } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, AlertCircle, ArrowLeft, Info } from 'lucide-react'
+
+// 添加自定义错误类型接口
+interface SupabaseError {
+  message: string;
+  code?: string;
+  originalError?: any;
+}
+
+// 类型守卫
+function isSupabaseError(error: any): error is SupabaseError {
+  return typeof error === 'object' && error !== null && 'message' in error;
+}
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -20,12 +32,6 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
-  const [isMockMode, setIsMockMode] = useState(false)
-  
-  // 检查是否在模拟模式下运行
-  useEffect(() => {
-    setIsMockMode(useMockMode())
-  }, [])
 
   // 邮箱密码注册
   const handleRegister = async (e: React.FormEvent) => {
@@ -56,18 +62,33 @@ export default function RegisterPage() {
     setIsLoading(true)
     
     try {
-      const { data, error } = await signUpWithEmail(email, password, { name })
+      const { data, error: signUpError } = await signUpWithEmail(email, password, { name })
       
-      if (error) {
-        throw error
+      if (signUpError) {
+        // 使用类型守卫来安全地处理错误
+        if (isSupabaseError(signUpError)) {
+          console.log('处理Supabase错误:', signUpError);
+          
+          if (signUpError.message.includes('User already registered')) {
+            setError('该邮箱已注册，请直接登录或使用其他邮箱');
+          } else if (signUpError.message.includes('rate limit')) {
+            setError('请求频率过高，请稍后再试');
+          } else if (signUpError.message.includes('Password should be at least')) {
+            setError('密码强度不足，请使用至少6位包含字母和数字的密码');
+          } else if (signUpError.message.includes('valid email')) {
+            setError('请输入有效的邮箱地址');
+          } else {
+            setError(signUpError.message || '注册失败，请稍后重试');
+          }
+        } else {
+          throw signUpError;
+        }
+        return;
       }
       
-      setSuccess('注册成功！')
-      
-      // 注册成功，跳转到登录页面
-      setTimeout(() => {
-        router.push('/auth/login')
-      }, 1500)
+      // 注册成功，立即跳转到计费页面
+      router.push('/billing');
+
     } catch (err: any) {
       setError(err.message || '注册失败，请稍后重试')
     } finally {
@@ -85,15 +106,6 @@ export default function RegisterPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {isMockMode && (
-            <Alert className="mb-4">
-              <Info className="h-4 w-4" />
-              <AlertDescription>
-                当前运行在模拟模式下，任意邮箱和密码均可注册
-              </AlertDescription>
-            </Alert>
-          )}
-          
           {error && (
             <Alert variant="destructive" className="mb-4">
               <AlertCircle className="h-4 w-4" />
