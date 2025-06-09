@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/auth-context"
 
 export default function Home() {
   const { user, isLoading } = useAuth()
+  console.log('Test Var from .env.local:', process.env.NEXT_PUBLIC_TEST_VAR);
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-background to-background/80">
