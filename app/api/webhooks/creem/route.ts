@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { headers } from 'next/headers';
-import { supabase } from '@/lib/supabase/admin'; // 我们需要使用管理员权限的 aupabase 客户端
+import { supabase } from '@/lib/supabase/admin'; // 我们需要使用管理员权限的 supabase 客户端
 
 const { Creem } = require('creem');
 
