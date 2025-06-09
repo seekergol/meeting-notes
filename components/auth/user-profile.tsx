@@ -3,9 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/auth-context'
-import { signOut } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,66 +12,52 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Loader2, LogOut, User, Settings } from 'lucide-react'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { LogOut, User, Settings, Loader2 } from 'lucide-react'
 
-export default function UserProfile() {
-  const { user, isLoading } = useAuth()
+export function UserProfile() {
+  const { user, supabase } = useAuth()
   const router = useRouter()
   const [isSigningOut, setIsSigningOut] = useState(false)
+  
+  if (!user) {
+    return null
+  }
   
   const handleSignOut = async () => {
     setIsSigningOut(true)
     try {
-      await signOut()
+      await supabase.auth.signOut()
       router.push('/')
     } catch (error) {
-      console.error('退出登录失败:', error)
+      console.error('Error signing out:', error)
     } finally {
       setIsSigningOut(false)
     }
   }
   
-  if (isLoading) {
-    return (
-      <Button variant="ghost" size="icon" disabled>
-        <Loader2 className="h-4 w-4 animate-spin" />
-      </Button>
-    )
-  }
-  
-  if (!user) {
-    return (
-      <Button onClick={() => router.push('/auth/login')}>
-        登录
-      </Button>
-    )
-  }
-  
   // 获取用户手机号
   const userPhone = user.phone || '未设置手机号'
-  
-  // 获取用户名首字母作为头像
-  const getInitials = () => {
-    if (user.user_metadata?.name) {
-      return user.user_metadata.name.charAt(0).toUpperCase()
-    }
-    if (user.phone) {
-      return user.phone.slice(-2)
-    }
-    return 'U'
-  }
   
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-8 w-8">
-            <AvatarFallback>{getInitials()}</AvatarFallback>
+            <AvatarImage src="" alt={user.email ?? ''} />
+            <AvatarFallback>{user.email?.[0].toUpperCase()}</AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuLabel>我的账号</DropdownMenuLabel>
+      <DropdownMenuContent className="w-56" align="end" forceMount>
+        <DropdownMenuLabel className="font-normal">
+          <div className="flex flex-col space-y-1">
+            <p className="text-sm font-medium leading-none">My Account</p>
+            <p className="text-xs leading-none text-muted-foreground">
+              {user.email}
+            </p>
+          </div>
+        </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem disabled>
           <User className="mr-2 h-4 w-4" />
